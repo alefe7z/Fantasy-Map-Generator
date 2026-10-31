@@ -2183,6 +2183,14 @@ export function migrateLegacySettings(mapVersion: string, data: string[]): void 
       data[1] = JSON.stringify(settings);
     }
   }
+  if (data[1]?.trimStart().startsWith("{")) {
+    const settings = safeParseJSON(data[1]);
+    if (settings?.lore && !Array.isArray(settings.lore.celestials)) {
+      // the fork's celestials manager added suns and moons to the lore, maps saved before it have none
+      settings.lore.celestials = [];
+      data[1] = JSON.stringify(settings);
+    }
+  }
   if (!compareVersions(mapVersion, "1.152.0").isOlder || data[1]?.trimStart().startsWith("{")) return;
 
   // v1.152.0 replaced the legacy pipe-delimited settings string with the map's settings object
@@ -2201,7 +2209,7 @@ export function migrateLegacySettings(mapVersion: string, data: string[]): void 
       winds: [225, 45, 225, 315, 135, 315]
     },
     cultures: { set: "world" },
-    lore: { name: "", description: "", calendar: { year: 1000, era: "Era", eraShort: "E" } },
+    lore: { name: "", description: "", calendar: { year: 1000, era: "Era", eraShort: "E" }, celestials: [] },
     units: {
       distance: { unit: "km", scale: 3 },
       area: { unit: "square" },

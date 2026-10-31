@@ -151,11 +151,25 @@ const climate = z.strictObject({
   winds: z.array(degrees).length(6)
 });
 
+export const CELESTIAL_TYPES = ["sun", "moon"] as const;
+
+/** a sun or moon of the world; size is relative to Earth's sun or moon, period is its cycle in days */
+const celestial = z.strictObject({
+  i: z.number().int(),
+  type: z.enum(CELESTIAL_TYPES),
+  name: z.string(),
+  color: hexColor,
+  size: positive,
+  period: positive,
+  description: z.string()
+});
+
 /** names files, state history and battle reports; the description is the author's own note */
 const lore = z.strictObject({
   name: z.string(),
   description: z.string(),
-  calendar: z.strictObject({ year: z.number().int(), era: z.string(), eraShort: z.string() })
+  calendar: z.strictObject({ year: z.number().int(), era: z.string(), eraShort: z.string() }),
+  celestials: z.array(celestial)
 });
 
 /** the map's scale, and the author's presentation of it. Units may be named by the user */

@@ -257,6 +257,13 @@ export const MAP_COMMANDS: MapCommand[] = [
     run: () => Controllers.NotesEditor.open()
   },
   {
+    id: "editCelestialsButton",
+    name: t("Celestials Manager"),
+    link: true,
+    aliases: "suns moons sky stars planets astronomy celestial",
+    run: () => Controllers.CelestialsEditor.open()
+  },
+  {
     id: "lore",
     name: t("Setup Lore"),
     link: true,

@@ -72,7 +72,7 @@ class OptionsModel {
           winds: [225, 45, 225, 315, 135, 315]
         },
         cultures: { set: "world" },
-        lore: { name: "", description: "", calendar: { year: 1000, era: "Era", eraShort: "E" } },
+        lore: { name: "", description: "", calendar: { year: 1000, era: "Era", eraShort: "E" }, celestials: [] },
         units: {
           distance: { unit: isImperial() ? "mi" : "km", scale: 3 },
           area: { unit: "square" },
@@ -272,6 +272,7 @@ class OptionsModel {
     map.customIcons = previous.customIcons;
     map.coastline = previous.coastline;
     map.relief = previous.relief;
+    map.lore.celestials = previous.lore.celestials;
 
     // and the requests it consumes
     const { width, height, density, sampling, jitter } = graph;
