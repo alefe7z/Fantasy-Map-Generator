@@ -297,7 +297,7 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
             family === usedFamily && unicodeRange === usedRange && variant === usedVariant
         );
         if (!defaultFont) fonts.push(usedFont);
-        declareFont(usedFont);
+        declareFont(defaultFont ?? usedFont); // older maps point their default fonts at Google Fonts
       });
     }
 

@@ -4,8 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import type { MenuItemConstructorOptions } from "electron";
-import { app, BrowserWindow, dialog, Menu, nativeImage, net, protocol, screen, shell } from "electron";
-import { initUpdater } from "./updater";
+import { app, BrowserWindow, dialog, Menu, nativeImage, net, protocol, screen, session } from "electron";
 
 const SCHEME = "app";
 const HOST = "fmg";
@@ -13,14 +12,16 @@ const APP_URL = `${SCHEME}://${HOST}/index.html`;
 const RENDERER_DIR = path.join(__dirname, "renderer");
 const ICON_PATH = path.join(__dirname, "icon.png");
 const DEV_SERVER_URL = process.env.VITE_DEV_SERVER_URL;
-const WIKI_URL = "https://github.com/Azgaar/Fantasy-Map-Generator/wiki";
-const DISCORD_URL = "https://discord.gg/X7E84HU";
 
 /**
  * The app is named after `productName`, but its data stays in the folder the name would have
  * produced before, so a rename never strands the maps stored in localStorage and IndexedDB
  */
 app.setPath("userData", path.join(app.getPath("appData"), "fantasy-map-generator"));
+
+// no update checks, metrics or component downloads in the background: the app stays offline
+app.commandLine.appendSwitch("disable-background-networking");
+app.commandLine.appendSwitch("disable-component-update");
 
 app.setAboutPanelOptions({
   applicationName: app.name,
@@ -84,21 +85,49 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 /**
- * A .map file is shared like a document, and the app builds markup out of what is inside it, so the one
- * directive that matters is `script-src`: no external origin may supply code. The rest stays permissive,
- * because maps embed data/blob images and fonts and AI providers use https or local http (localhost or LAN).
+ * This build never touches the network (see `blockNetwork`), and the policy says the same: everything comes
+ * from the app itself or is embedded in the map as data or blob URLs.
  * `unsafe-eval` is required by the assistant, which runs the scripts the model writes
  */
 const CSP = [
   "default-src 'self' data: blob:",
   `script-src 'self' 'unsafe-inline' 'unsafe-eval'`,
-  "style-src 'self' 'unsafe-inline' https:",
-  "font-src 'self' data: https:",
-  "img-src 'self' data: blob: https:",
+  "style-src 'self' 'unsafe-inline'",
+  "font-src 'self' data:",
+  "img-src 'self' data: blob:",
   "media-src 'self' data: blob:",
-  "connect-src 'self' data: blob: http: https: wss:",
-  "frame-src 'self' https:"
+  "connect-src 'self' data: blob:",
+  "frame-src 'self'"
 ].join("; ");
+
+/**
+ * Cancel every request that would leave the machine, whatever part of the app makes it: the renderer, a
+ * frame, fonts, or Electron itself. Only the app's own files pass, and the dev server in a dev run
+ */
+function blockNetwork(): void {
+  const devServer = !app.isPackaged && DEV_SERVER_URL ? new URL(DEV_SERVER_URL).host : null;
+
+  const isLocal = (url: string): boolean => {
+    const { protocol, host } = new URL(url);
+    if (protocol === `${SCHEME}:`) return host === HOST;
+    if (protocol === "file:") return !host; // the renderer files net.fetch reads; a host would be a network share
+    if (["data:", "blob:", "devtools:"].includes(protocol)) return true;
+    return devServer !== null && ["http:", "https:", "ws:", "wss:"].includes(protocol) && host === devServer;
+  };
+
+  // Chromium's own downloads skip these hooks: the spellchecker would fetch its dictionaries
+  session.defaultSession.setSpellCheckerEnabled(false);
+
+  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+    let local = false;
+    try {
+      local = isLocal(details.url);
+    } catch {
+      // not a parsable URL: nothing to let through
+    }
+    callback({ cancel: !local });
+  });
+}
 
 function serveRenderer(): void {
   protocol.handle(SCHEME, async request => {
@@ -127,21 +156,12 @@ function serveRenderer(): void {
   });
 }
 
-/** Keep the app itself in the window, hand every external link to the default browser */
+/** Keep the app itself in the window; an external link opens nothing, not even the browser */
 function routeExternalLinks(window: BrowserWindow): void {
-  const openExternal = (url: string) => {
-    if (/^(https?|mailto):/.test(url)) shell.openExternal(url);
-  };
-
-  window.webContents.setWindowOpenHandler(({ url }) => {
-    openExternal(url);
-    return { action: "deny" };
-  });
+  window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
 
   window.webContents.on("will-navigate", (event, url) => {
-    if (url === window.webContents.getURL()) return; // in-app reload
-    event.preventDefault();
-    openExternal(url);
+    if (url !== window.webContents.getURL()) event.preventDefault(); // only an in-app reload
   });
 }
 
@@ -198,11 +218,7 @@ function buildMenu(): void {
     { role: "windowMenu" },
     {
       role: "help",
-      submenu: [
-        { label: "Wiki", click: () => shell.openExternal(WIKI_URL) },
-        { label: "Discord", click: () => shell.openExternal(DISCORD_URL) },
-        ...(isMac ? [] : ([{ type: "separator" }, { role: "about" }] satisfies MenuItemConstructorOptions[]))
-      ]
+      submenu: [...(isMac ? [] : ([{ role: "about" }] satisfies MenuItemConstructorOptions[]))]
     }
   ];
 
@@ -210,16 +226,11 @@ function buildMenu(): void {
 }
 
 let quitting = false; // set on Cmd+Q, where closing the window alone would leave the app running
-let skipConfirmation = false; // set once the user has confirmed, and by the updater to install on restart
+let skipConfirmation = false; // set once the user has confirmed
 
 app.on("before-quit", () => {
   quitting = true;
 });
-
-/** Closes the window without the quit confirmation, so the installer can restart the app */
-function allowClose(): void {
-  skipConfirmation = true;
-}
 
 /**
  * The web app warns before navigating away via `onbeforeunload`, but Electron cancels the close
@@ -308,10 +319,10 @@ if (!app.requestSingleInstanceLock()) {
   app.whenReady().then(() => {
     // a dev run borrows the Electron bundle, so its dock icon has to be replaced by hand
     if (!app.isPackaged) app.dock?.setIcon(nativeImage.createFromPath(ICON_PATH));
+    blockNetwork();
     serveRenderer();
     buildMenu();
     createWindow();
-    initUpdater(allowClose); // app-wide, so re-opening a window on macOS does not start a second updater
     app.on("activate", () => BrowserWindow.getAllWindows().length === 0 && createWindow());
   });
 

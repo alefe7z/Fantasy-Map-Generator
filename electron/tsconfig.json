@@ -12,5 +12,5 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["main.ts", "preload.ts", "updater.ts"]
+  "include": ["main.ts", "preload.ts"]
 }
