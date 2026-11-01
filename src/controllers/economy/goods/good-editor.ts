@@ -104,9 +104,7 @@ function open(editedGood?: Good, onUpdate?: () => void): void {
 
           if (distribution) {
             try {
-              const methods = Goods.getMethods();
-              const allMethods = `{${Object.keys(methods).join(", ")}}`;
-              new Function(allMethods, `return ${distribution}`)(methods);
+              Goods.compileDistribution(distribution)(Goods.getMethods());
             } catch (err) {
               errors.push(
                 t("Distribution function is invalid: {{- error}}", { error: (err as Error).message || String(err) })

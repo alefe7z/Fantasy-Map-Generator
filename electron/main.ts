@@ -87,7 +87,7 @@ protocol.registerSchemesAsPrivileged([
  * A .map file is shared like a document, and the app builds markup out of what is inside it, so the one
  * directive that matters is `script-src`: no external origin may supply code. The rest stays permissive,
  * because maps embed data/blob images and fonts and AI providers use https or local http (localhost or LAN).
- * `unsafe-eval` is required by the goods distribution formulas, which compile to `new Function`
+ * `unsafe-eval` is required by the assistant, which runs the scripts the model writes
  */
 const CSP = [
   "default-src 'self' data: blob:",

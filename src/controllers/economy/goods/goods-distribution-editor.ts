@@ -815,9 +815,7 @@ function countMatchingCells(distribution: string): string {
   let cells = 0;
 
   try {
-    const methods = Goods.getMethods();
-    const allMethods = `{${Object.keys(methods).join(", ")}}`;
-    const spread = new Function(allMethods, `return ${distribution}`);
+    const spread = Goods.compileDistribution(distribution);
     for (const cellId of pack.cells.i) {
       const eligible = spread(Goods.getMethods(cellId));
       if (eligible) cells++;

@@ -12,7 +12,7 @@ Cells are processed in random order. For every cell the generator walks the (res
 A cell holds at most one good. Glacier cells are skipped entirely while the Glacier biome habitability is `0`. Because goods are reshuffled as the generator walks the map, no good gets a systematic advantage over the others.
 
 # Technical info
-Technically a distribution is an expression evaluated for each cell to return `true` or `false`. If `true` is returned, the good can be placed in the cell. The expression is plain JS, so you can use logical operators (`!` for NOT, `||` for OR, `&&` for AND) and parentheses.
+Technically a distribution is an expression evaluated for each cell to return `true` or `false`. If `true` is returned, the good can be placed in the cell. The expression combines the functions below with logical operators (`!` for NOT, `||` for OR, `&&` for AND) and parentheses. Arguments are numbers or quoted strings; anything else makes the expression invalid, and a good with an invalid expression is not placed.
 
 The expression can only call the built-in functions below. They make the syntax easier to read and write:
 * `random(number)`: percentage of true, e.g. `50` will return true in 50% of cases

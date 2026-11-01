@@ -1,5 +1,6 @@
 import Alea from "alea";
 import { color, shuffler } from "d3";
+import { compileDistribution, type Distribution } from "@/model/economy/goods-distribution";
 import { Icons } from "@/model/icons";
 import { CULTURE_TYPES, type CultureType } from "@/model/society/cultures-generator";
 import { Tags } from "@/model/tags";
@@ -978,6 +979,7 @@ export class GoodsModule {
 
   private cells!: PackedGraph["cells"];
   private cellId: number = 0;
+  private distributions = new Map<string, Distribution>();
   private goodById: Good[] = [];
 
   regenerate(): void {
@@ -1000,9 +1002,9 @@ export class GoodsModule {
     const resourceMaxCells = Math.ceil((200 * this.cells.i.length) / 5000);
     const resources: Record<number, number> = {};
 
-    const methods = `{${Object.keys(this.getMethods()).join(", ")}}`;
     const shuffledCells = shuffle(this.cells.i.slice());
     const goods = [...pack.goods];
+    const spreads = new Map(goods.map(good => [good.i, this.spreadOf(good)]));
 
     for (const cellId of shuffledCells) {
       if (!(cellId % 10)) shuffle(goods);
@@ -1010,11 +1012,10 @@ export class GoodsModule {
       this.cellId = cellId;
 
       for (const good of goods) {
-        if (!good.distribution || !good.chance) continue;
+        const spread = spreads.get(good.i);
+        if (!spread || !good.chance) continue;
         if (resources[good.i] >= resourceMaxCells) continue;
         if (Math.random() * 100 > good.chance) continue;
-
-        const spread = new Function(methods, `return ${good.distribution}`);
         if (!spread(this.getMethods())) continue;
 
         this.cells.good[cellId] = good.i;
@@ -1041,16 +1042,15 @@ export class GoodsModule {
       if (this.cells.good[cellId] === goodId) this.cells.good[cellId] = 0;
     }
 
-    if (!good.distribution || !good.chance) {
+    const spread = this.spreadOf(good);
+    if (!spread || !good.chance) {
       log.timeEnd("regenerateGoodPlacement");
       return;
     }
 
     const resourceMaxCells = Math.ceil((200 * this.cells.i.length) / 5000);
     const resources: Record<number, number> = {};
-    const methods = `{${Object.keys(this.getMethods()).join(", ")}}`;
     const shuffledCells = shuffler(() => Math.random())(this.cells.i.slice());
-    const spread = new Function(methods, `return ${good.distribution}`);
 
     for (const cellId of shuffledCells) {
       if (this.cells.biome[cellId] === 11 && pack.biomes[11].habitability === 0) continue; // skip glaciers
@@ -1072,6 +1072,26 @@ export class GoodsModule {
   restoreDefaults() {
     pack.goods = structuredClone(this.defaultGoods);
     this.sync();
+  }
+
+  /** Parse a distribution expression; throws on anything outside the distribution grammar */
+  compileDistribution(distribution: string): Distribution {
+    const cached = this.distributions.get(distribution);
+    if (cached) return cached;
+    const spread = compileDistribution(distribution, Object.keys(this.getMethods()));
+    this.distributions.set(distribution, spread);
+    return spread;
+  }
+
+  // a broken expression, such as one in an edited or foreign map, places nothing instead of stopping generation
+  private spreadOf(good: Good): Distribution | null {
+    if (!good.distribution) return null;
+    try {
+      return this.compileDistribution(good.distribution);
+    } catch (error) {
+      log.warn(`Good ${good.i} has an invalid distribution: ${(error as Error).message}`);
+      return null;
+    }
   }
 
   getMethods(cellId: number = this.cellId) {
