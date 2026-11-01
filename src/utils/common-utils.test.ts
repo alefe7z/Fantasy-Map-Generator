@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getCoordinates, getLatitude, getLongitude, parseError } from "./common-utils";
+import { getCoordinates, getLatitude, getLongitude, link, parseError } from "./common-utils";
 import { getBase64 } from "./file-utils";
 
 describe("getLongitude", () => {
@@ -165,5 +165,22 @@ describe("getBase64", () => {
   it("returns null on network error", async () => {
     next = { networkError: true };
     expect(await call()).toBeNull();
+  });
+});
+
+describe("link", () => {
+  it("links http(s) and mailto addresses, escaped for the attribute", () => {
+    expect(link("https://example.com/?a=1&b=2", "Docs")).toBe(
+      '<a href="https://example.com/?a=1&amp;b=2" rel="noopener" target="_blank">Docs</a>'
+    );
+    expect(link("mailto:me@example.com", "Mail")).toContain('href="mailto:me@example.com"');
+  });
+
+  it("keeps markup in an untrusted address out of the page", () => {
+    const html = link('https://x.com/"><img src=x onerror=alert(1)>', "map");
+    const anchor = Object.assign(document.createElement("div"), { innerHTML: html }).firstElementChild!;
+    expect(anchor.tagName).toBe("A");
+    expect(anchor.children).toHaveLength(0);
+    expect(link("javascript:alert(1)", "map")).toContain('href="#"');
   });
 });

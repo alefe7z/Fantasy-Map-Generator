@@ -2,6 +2,7 @@ import { clipPolygon } from "lineclip";
 import { last } from "./array-utils";
 import { log } from "./logger";
 import { distanceSquared, rn } from "./number-utils";
+import { escapeHtml } from "./string-utils";
 
 /**
  * Clip polygon points to graph boundaries
@@ -176,7 +177,8 @@ export const wiki = (page: string): void => {
  * @returns HTML anchor element as a string
  */
 export const link = (URL: string, description: string): string => {
-  return `<a href="${URL}" rel="noopener" target="_blank">${description}</a>`;
+  const href = /^\s*(https?|mailto):/i.test(URL) ? escapeHtml(URL.trim()) : "#"; // a shared map link is untrusted
+  return `<a href="${href}" rel="noopener" target="_blank">${description}</a>`;
 };
 
 /**

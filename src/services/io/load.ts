@@ -23,6 +23,7 @@ import { TradeAnimation } from "@/renderers/trade-animation";
 import { undraw } from "@/renderers/undraw";
 import { Services } from "@/services";
 import { declareFont, fonts } from "@/services/fonts";
+import { neutralizeLoadedText } from "@/services/io/loaded-text";
 import { MapRepair } from "@/services/io/map-repair";
 import { LocalDB } from "@/services/local-db";
 import { focusOn, generateMapOnLoad } from "@/services/url-params";
@@ -385,6 +386,7 @@ async function parseLoadedData(data: string[], mapVersion: string | null): Promi
     Names.clearChains();
 
     await resolveVersionConflicts(mapVersion!, data);
+    neutralizeLoadedText();
 
     // hidden layers save no paths, so colored hatchings are restored from data
     const { biomes, cultures, states, religions, provinces, zones, markets } = pack;

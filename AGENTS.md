@@ -56,6 +56,10 @@ npm run build
   Relief icons are drawn as shapes already placed (`src/renderers/relief-shapes.ts`), wrapped in `<g data-id>`;
   find a map element by `closest("[data-id]")`, never by `tagName === "use"`. Measure a rendering change with a
   Chrome trace before and after, not by eye.
+- A `.map` file can come from anyone. Text from it goes into HTML only through `escapeHtml()`, and nothing from
+  it is ever run as code: no `new Function`/`eval` on map data (goods formulas use
+  `src/model/economy/goods-distribution.ts`). Loading swaps `" < >` in map text for lookalikes
+  (`src/services/io/loaded-text.ts`); still escape, because the user and the assistant edit text after load.
 - A new model singleton is exposed in `src/app/fmg.ts`; a new editor is registered in `src/controllers/index.ts`,
   in `src/app/map-commands.ts` and, when it has a button, in the matching tab under `src/app/chrome/tabs/`.
 

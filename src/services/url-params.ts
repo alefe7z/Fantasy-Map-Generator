@@ -17,7 +17,15 @@ import { t } from "@/utils/i18n";
 import { log } from "@/utils/logger";
 import { ensureEl } from "@/utils/node-utils";
 
-const MAP_LINK_PATTERN = /(ftp|http|https):\/\/(\w+:{0,1}\w*@)?(\S+)(:[0-9]+)?(\/|\/([\w#!:.?+=&%@!\-/]))?/;
+/** A map link is fetched as given, so it has to be a whole http(s) URL, also once decoded again by the loader */
+export function isMapLink(maplink: string): boolean {
+  try {
+    const { protocol } = new URL(decodeURIComponent(maplink));
+    return protocol === "https:" || protocol === "http:";
+  } catch {
+    return false; // not a URL or a malformed percent-escape
+  }
+}
 
 const searchParams = () => new URL(window.location.href).searchParams;
 
@@ -31,7 +39,7 @@ export async function checkLoadParameters(): Promise<void> {
   const maplink = params.get("maplink");
   if (maplink) {
     log.warn("Load map from URL");
-    if (MAP_LINK_PATTERN.test(maplink)) {
+    if (isMapLink(maplink)) {
       setTimeout(() => Services.Load.loadMapFromURL(maplink, true), 1000);
       return;
     }
