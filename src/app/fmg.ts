@@ -52,6 +52,7 @@ import { Cultures } from "@/model/society/cultures-generator";
 import { Names } from "@/model/society/names-generator";
 import { Population } from "@/model/society/population-generator";
 import { Religions } from "@/model/society/religions-generator";
+import { Celestials } from "@/model/story/celestials";
 import { Journeys } from "@/model/story/journeys/journeys-generator";
 import { Lore } from "@/model/story/lore";
 import { Markers } from "@/model/story/markers-generator";
@@ -150,6 +151,7 @@ const FMG = {
   Labels,
   Lakes,
   Legends,
+  Celestials,
   Lore,
   MapEntities,
   MapIntegrity,

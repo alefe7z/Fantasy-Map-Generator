@@ -13,6 +13,7 @@ const TEMPLATE = /* html */ `
     <button id="overviewBurgsButton" data-tip="${t("Burgs Overview")}" data-shortcut="Shift + T">
       ${t("Burgs")}
     </button>
+    <button id="editCelestialsButton" data-tip="${t("Celestials Manager")}">${t("Celestials")}</button>
     <button
       id="editCoastlineSettings"
       data-tip="${t("Coastline Settings")}"

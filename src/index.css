@@ -248,6 +248,11 @@ t,
   cursor: pointer;
 }
 
+/* set by the zoom while the map moves: see ui/map/zoom.ts */
+#map.moving #viewbox {
+  pointer-events: none;
+}
+
 #burgIcons {
   cursor: pointer;
 }

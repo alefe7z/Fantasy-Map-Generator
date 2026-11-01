@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, expect, test, vi } from "vitest";
+import { Relief } from "@/model/physical/relief-generator";
 import { Styles } from "@/model/styles/styles";
 import { setViewportSize } from "@/renderers/viewport/viewport";
 import { drawRelief } from "./draw-relief-icons";
@@ -87,4 +88,18 @@ test("relief stroke color is a group attribute shared by mixed sets without repl
       expect(use.hasAttribute("stroke")).toBe(false);
     }
   }
+});
+
+test("an icon whose art is in the page is drawn as shapes, keeping its data-id for the editor", async () => {
+  styles.relief.options.size = 1;
+  const id = Relief.symbolId(pack.relief[0], styles.relief.options.set);
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<svg><symbol id="${id}" viewBox="0 0 10 10" stroke-width="1"><path d="M1 9L5 1L9 9Z" stroke="none"/></symbol></svg>`
+  );
+  await drawRelief();
+
+  expect(document.querySelector("#terrain use")).toBeNull();
+  const icon = document.querySelector<SVGGElement>('#terrain > g[data-id="0"]')!;
+  expect(icon.querySelector("path")!.getAttribute("d")).toMatch(/^M10\.4 23\.6/); // 10 + 0.1 × 4, 20 + 0.9 × 4
 });
