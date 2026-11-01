@@ -1,4 +1,5 @@
 // Celestials Manager: the world's suns and moons, edited in `options.map.lore.celestials` through the Celestials model
+import { hsl } from "d3";
 import { type Celestial, Celestials, type CelestialType } from "@/model/story/celestials";
 import { Dialog } from "@/ui/dialog/dialog";
 import {
@@ -37,6 +38,53 @@ const columns: EditorColumn<Celestial>[] = [
 
 const table = initEditorTable<Celestial>({ getData: () => Celestials.all, onUpdate: renderPage });
 
+// the artwork and its average color, which a body's own color is reached from by a CSS filter
+const ART: Record<CelestialType, { src: string; base: string }> = {
+  sun: { src: "./images/celestials/sun.webp", base: "#b98032" },
+  moon: { src: "./images/celestials/moon.webp", base: "#9a6a91" }
+};
+const SKY_SIZE = 44; // px of a body with size 1
+
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+function getTint({ type, color }: Celestial): string {
+  const base = hsl(ART[type].base);
+  const target = hsl(color);
+  const hue = Number.isNaN(target.h) ? 0 : target.h - base.h;
+  const saturation = clamp((target.s || 0) / base.s, 0, 2.5);
+  const brightness = clamp(1 + (target.l - base.l) * 1.2, 0.35, 1.8);
+  return `hue-rotate(${Math.round(hue)}deg) saturate(${saturation.toFixed(2)}) brightness(${brightness.toFixed(2)}) drop-shadow(0 0 6px ${color})`;
+}
+
+function renderSky(): void {
+  const sky = ensureEl("celestialsSky");
+  const bodies = [...Celestials.all].sort((a, b) => (a.type === b.type ? 0 : a.type === "sun" ? -1 : 1));
+  if (!bodies.length) {
+    sky.innerHTML = `<span class="ce-empty">${t("The sky is empty: add a sun or a moon")}</span>`;
+    return;
+  }
+
+  sky.innerHTML = bodies
+    .map(body => {
+      const px = Math.round(clamp(SKY_SIZE * body.size, 14, SKY_SIZE * 3));
+      return /* html */ `<img src="${ART[body.type].src}" alt="" draggable="false" data-id="${body.i}"
+        data-tip="${escapeHtml(body.name)}" style="width: ${px}px; height: ${px}px; filter: ${getTint(body)}" />`;
+    })
+    .join("");
+}
+
+/** Repaint one body in the sky while its color or size is being changed */
+function updateSkyBody(body: Celestial): void {
+  const img = ensureEl("celestialsSky").querySelector<HTMLImageElement>(`img[data-id="${body.i}"]`);
+  if (!img) {
+    renderSky();
+    return;
+  }
+  const px = Math.round(clamp(SKY_SIZE * body.size, 14, SKY_SIZE * 3));
+  img.style.width = img.style.height = `${px}px`;
+  img.style.filter = getTint(body);
+}
+
 function open(): void {
   if (options.app.mode) return;
   Dialog.closeAll(`#${dialogId}, .stable`);
@@ -49,6 +97,14 @@ function renderDialog(): void {
   Dialog.destroy(dialogId);
 
   const html = /* html */ `<div id="${dialogId}" class="dialog stable editorDialog">
+    <style>
+      #celestialsSky { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px;
+        width: 0; min-width: 100%; box-sizing: border-box; min-height: 72px; margin-bottom: 6px; padding: 10px; border-radius: 4px;
+        background: radial-gradient(ellipse at top, #2c3260, #10122a 75%); }
+      #celestialsSky img { object-fit: contain; user-select: none; }
+      #celestialsSky .ce-empty { color: #aab0d0; font-style: italic; }
+    </style>
+    <div id="celestialsSky" data-tip="${t("The sky as the world sees it")}"></div>
     <div id="celestialsBody" class="table">${renderEditorHeader({ dialogId, columns })}</div>
 
     <div id="celestialsFooter" class="totalLine">
@@ -96,6 +152,7 @@ function renderPage(view: TableView<Celestial>): void {
   }
   body.insertAdjacentHTML("beforeend", lines);
 
+  renderSky();
   ensureEl("celestialsSuns").textContent = String(view.all.filter(item => item.type === "sun").length);
   ensureEl("celestialsMoons").textContent = String(view.all.filter(item => item.type === "moon").length);
 
@@ -124,7 +181,9 @@ function onTypeChange(this: HTMLSelectElement): void {
 
 function onColorInput(this: HTMLInputElement): void {
   const item = getRow(this);
-  if (item) Celestials.update(item.i, { color: this.value });
+  if (!item) return;
+  Celestials.update(item.i, { color: this.value });
+  updateSkyBody(item);
 }
 
 function onNameChange(this: HTMLInputElement): void {
@@ -136,6 +195,7 @@ function onNameChange(this: HTMLInputElement): void {
     return;
   }
   Celestials.update(item.i, { name: this.value });
+  renderSky();
 }
 
 function onNumberChange(this: HTMLInputElement): void {
@@ -150,6 +210,7 @@ function onNumberChange(this: HTMLInputElement): void {
   }
   Celestials.update(item.i, { [key]: value });
   this.value = String(item[key]);
+  if (key === "size") updateSkyBody(item);
 }
 
 function onDescriptionChange(this: HTMLInputElement): void {

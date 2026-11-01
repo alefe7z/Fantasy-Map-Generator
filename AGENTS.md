@@ -49,6 +49,9 @@ npm run build
   for maps saved without it, and a decision whether `Options.randomize()` keeps it on regeneration. Never guard
   for the old shape anywhere else.
 - Tests that compare a whole object (`toEqual`) break when you add a field: update them, don't loosen them.
+- Images in `public/` are precached by the PWA, so every byte reaches every user. One picture per file, cropped
+  and sized for how it is shown (a UI sprite: 256 px at most), as WebP with alpha (Pillow: `save(..., "WEBP",
+  quality=88)`); tens of KB, not MB. Ship an asset in the same PR that uses it: an unused file is dead weight.
 - A new model singleton is exposed in `src/app/fmg.ts`; a new editor is registered in `src/controllers/index.ts`,
   in `src/app/map-commands.ts` and, when it has a button, in the matching tab under `src/app/chrome/tabs/`.
 
