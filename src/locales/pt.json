@@ -3578,5 +3578,7 @@
   "Sun": "Sol",
   "Sun or moon": "Sol ou lua",
   "Suns in the sky": "Sóis no céu",
-  "The value must be greater than zero": "O valor deve ser maior que zero"
+  "The value must be greater than zero": "O valor deve ser maior que zero",
+  "The sky is empty: add a sun or a moon": "O céu está vazio: adicione um sol ou uma lua",
+  "The sky as the world sees it": "O céu como o mundo o vê"
 }
