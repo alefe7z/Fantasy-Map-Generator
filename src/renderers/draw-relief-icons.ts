@@ -2,6 +2,7 @@ import { Icons } from "@/model/icons";
 import type { ReliefIcon } from "@/model/physical/relief-generator";
 import { Relief } from "@/model/physical/relief-generator";
 import { Layers } from "@/renderers/layers";
+import { drawReliefShapes } from "@/renderers/relief-shapes";
 import { ViewportLayers, type ViewportRenderContext } from "@/renderers/viewport/viewport-renderer";
 import { log } from "@/utils/logger";
 import { escapeHtml } from "@/utils/string-utils";
@@ -27,7 +28,7 @@ export const redrawRelief = (): void => {
   });
 };
 
-/** the icon a rendered `<use>` stands for: `data-id` is its index in `pack.relief` as of the last draw */
+/** the icon a rendered `<use>` or shape group stands for: `data-id` is its index in `pack.relief` as of the last draw */
 export const getReliefIcon = (dataId: string): ReliefIcon | undefined => pack.relief?.[Number(dataId)];
 
 export function removeRelief(): void {
@@ -55,6 +56,11 @@ function reconcileRelief(context: ViewportRenderContext): void {
     const top = y - shift;
     if (left > x1 || top > y1 || left + drawn < x0 || top + drawn < y0) continue;
     const symbol = Relief.symbolId(icon, set);
+    const shapes = drawReliefShapes(symbol, left, top, drawn, ` data-id="${index}"`);
+    if (shapes) {
+      markup.push(shapes);
+      continue;
+    }
     let href = hrefs.get(symbol);
     if (href === undefined) {
       href = escapeHtml(Icons.href(symbol));

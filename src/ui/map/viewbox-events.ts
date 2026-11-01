@@ -94,6 +94,13 @@ export function openEditor(element: Element): boolean {
     return true;
   }
 
+  // a relief icon is a `<use>` or a group of shapes, which may nest groups of its own
+  const reliefIcon = target.closest<SVGElement>("#terrain [data-id]");
+  if (reliefIcon) {
+    Controllers.ReliefEditor.open(reliefIcon);
+    return true;
+  }
+
   const open = PARENT_EDITORS[parent.id] || GRAND_EDITORS[grand.id] || GREAT_EDITORS[great.id];
   open?.(target, parent);
   return Boolean(open);
