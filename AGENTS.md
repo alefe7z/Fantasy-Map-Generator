@@ -52,6 +52,10 @@ npm run build
 - Images in `public/` are precached by the PWA, so every byte reaches every user. One picture per file, cropped
   and sized for how it is shown (a UI sprite: 256 px at most), as WebP with alpha (Pillow: `save(..., "WEBP",
   quality=88)`); tens of KB, not MB. Ship an asset in the same PR that uses it: an unused file is dead weight.
+- Thousands of `<use>` elements make every zoom frame slow: each one is a transform node the browser re-layerizes.
+  Relief icons are drawn as shapes already placed (`src/renderers/relief-shapes.ts`), wrapped in `<g data-id>`;
+  find a map element by `closest("[data-id]")`, never by `tagName === "use"`. Measure a rendering change with a
+  Chrome trace before and after, not by eye.
 - A new model singleton is exposed in `src/app/fmg.ts`; a new editor is registered in `src/controllers/index.ts`,
   in `src/app/map-commands.ts` and, when it has a button, in the matching tab under `src/app/chrome/tabs/`.
 

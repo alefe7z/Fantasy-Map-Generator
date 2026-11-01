@@ -22,6 +22,8 @@ let frameId: number | null = null;
 let pendingScaleChange = false;
 let pendingPositionChange = false;
 let isViewChanged = false;
+let isDragging = false;
+let pendingDrag = false;
 const viewportListeners = new Set<() => void>();
 
 /** Call `listener` after each camera frame until the returned function is called */
@@ -40,6 +42,9 @@ function onZoom(event: D3ZoomEvent<SVGSVGElement, unknown>): void {
 
   setViewportTransform(k, x, y);
 
+  // a drag hit-tests the map under the pointer on every move; a wheel barely does, and toggling costs a style pass
+  const type = event.sourceEvent?.type;
+  pendingDrag = pendingDrag || type === "mousemove" || type === "pointermove" || type === "touchmove";
   pendingScaleChange = pendingScaleChange || isScaleChanged;
   pendingPositionChange = pendingPositionChange || isPositionChanged;
   if (frameId !== null) return;
@@ -62,6 +67,12 @@ function handleZoomPerFrame(): void {
     "transform",
     `translate(${viewport.x} ${viewport.y}) scale(${viewport.scale})`
   );
+  // nothing is hovered while the map is dragged, so skip hit testing every shape under the pointer each frame;
+  // set on the first move, not on the press, so a click still reaches what it is on
+  if (pendingDrag && !isDragging) {
+    isDragging = true;
+    ensureEl("map").classList.add("moving");
+  }
 
   if (didScaleChange) {
     Layers.draw("scaleBar");
@@ -86,6 +97,11 @@ function handleZoomEnd(): void {
     handleZoomPerFrame();
   }
 
+  pendingDrag = false;
+  if (isDragging) {
+    isDragging = false;
+    ensureEl("map").classList.remove("moving");
+  }
   invokeActiveZooming();
 }
 

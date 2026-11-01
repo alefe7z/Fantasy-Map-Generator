@@ -495,8 +495,8 @@ function removeIcon(): void {
 }
 
 function getIconData(element?: Element): ReliefIcon | null {
-  if (element?.tagName !== "use") return null;
-  const id = (element as SVGUseElement).dataset.id;
+  const icon = element?.closest?.<SVGElement>("[data-id]"); // a `<use>`, or the group of a shape-drawn icon
+  const id = icon?.dataset.id;
   return (id && getReliefIcon(id)) || null;
 }
 
